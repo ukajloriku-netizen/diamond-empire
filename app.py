@@ -171,3 +171,23 @@ if elapsed >= 1.0:
             
     st.session_state.last_tick = now
     st.rerun()
+
+# --- MONETIZATION & LEGAL (REQUIRED FOR ADSENSE) ---
+st.markdown("---")
+col_a, col_b = st.columns(2)
+
+with col_a:
+    st.subheader("About Diamond Empire")
+    st.write("Diamond Empire is a high-performance incremental mining simulator. Build your industrial complex, manage energy surges, and reach the Universal Reset Core.")
+
+with col_b:
+    st.subheader("Legal & Privacy")
+    st.write("Privacy Policy: This application does not collect, store, or share any personal user data. All game progress is stored locally in the session or the server-side save file.")
+
+# THE AD SLOT (Place your AdSense code here once approved)
+st.markdown("""
+    <div style="background: #111; border: 1px dashed #444; padding: 20px; text-align: center; color: #555; margin-top: 20px;">
+        <p>ADVERTISEMENT SPACE</p>
+        <small>Application Status: Reviewing for Monetization</small>
+    </div>
+""", unsafe_allow_html=True)
