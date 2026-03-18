@@ -1,4 +1,5 @@
-import streamlit as st
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243"
+     crossorigin="anonymous"></script>import streamlit as st
 import json
 import time
 import math
