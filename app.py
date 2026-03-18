@@ -1,13 +1,11 @@
 import streamlit as st
 import json
 import time
-import math
-import os
 
-# --- 1. THE CONFIG (Must be the first Streamlit command) ---
-st.set_page_config(page_title="DIAMOND EMPIRE: OVERDRIVE", layout="wide", initial_sidebar_state="collapsed")
+# 1. THE ENGINE START (Must be Line 1)
+st.set_page_config(page_title="DIAMOND EMPIRE", layout="wide")
 
-# --- 2. THE GOOGLE CODE (Wrapped so it doesn't crash) ---
+# 2. THE GOOGLE CONNECTION (Safe Version)
 st.components.v1.html(
     """
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" 
@@ -16,9 +14,11 @@ st.components.v1.html(
     height=0,
 )
 
-# --- 3. SAVING/LOADING LOGIC ---
-DB_FILE = "empire_grind_save.json"
-# ... (Keep the rest of your save/load functions here)
+# 3. YOUR GAME LOGIC (Example - Replace with your full game code below)
+st.title("💎 DIAMOND EMPIRE: OVERDRIVE")
+st.write("The engine is back online. Google is now connected.")
+
+# --- PASTE THE REST OF YOUR GAME CODE (BUILDINGS, UPGRADES, ETC) HERE ---
 
 def save_game():
     data = {
