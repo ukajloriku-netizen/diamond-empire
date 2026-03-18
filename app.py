@@ -4,17 +4,21 @@ import time
 import math
 import os
 
-# --- GOOGLE ADSENSE CONNECTION (FIXED) ---
-st.markdown("""
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" 
-    crossorigin="anonymous"></script>
-""", unsafe_allow_html=True)
-
-# --- CONFIG ---
+# --- 1. THE CONFIG (Must be the first Streamlit command) ---
 st.set_page_config(page_title="DIAMOND EMPIRE: OVERDRIVE", layout="wide", initial_sidebar_state="collapsed")
 
-# --- SAVING/LOADING ---
+# --- 2. THE GOOGLE CODE (Wrapped so it doesn't crash) ---
+st.components.v1.html(
+    """
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" 
+    crossorigin="anonymous"></script>
+    """,
+    height=0,
+)
+
+# --- 3. SAVING/LOADING LOGIC ---
 DB_FILE = "empire_grind_save.json"
+# ... (Keep the rest of your save/load functions here)
 
 def save_game():
     data = {
