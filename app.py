@@ -1,9 +1,14 @@
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243"
-     crossorigin="anonymous"></script>import streamlit as st
+import streamlit as st
 import json
 import time
 import math
 import os
+
+# --- GOOGLE ADSENSE CONNECTION (FIXED) ---
+st.markdown("""
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" 
+    crossorigin="anonymous"></script>
+""", unsafe_allow_html=True)
 
 # --- CONFIG ---
 st.set_page_config(page_title="DIAMOND EMPIRE: OVERDRIVE", layout="wide", initial_sidebar_state="collapsed")
