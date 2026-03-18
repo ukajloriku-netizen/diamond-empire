@@ -4,18 +4,19 @@ import time
 import math
 import os
 
-# --- 1. GOOGLE ADSENSE CONNECTION (THE SAFE VERSION) ---
-# This must be the very first command to load the ads without crashing Python
+# --- 1. THE BRAIN ---
 st.set_page_config(page_title="DIAMOND EMPIRE: OVERDRIVE", layout="wide", initial_sidebar_state="collapsed")
 
+# --- 2. THE GOOGLE CODE (This is the "Snippet" you see) ---
 st.components.v1.html(
-    f"""
+    """
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" 
     crossorigin="anonymous"></script>
     """,
     height=0,
 )
 
+# ... (Keep all your game logic, BUILDINGS, and CSS below this)
 # --- 2. SAVING/LOADING ---
 DB_FILE = "empire_grind_save.json"
 
