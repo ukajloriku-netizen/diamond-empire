@@ -2,6 +2,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 import time
 import math
+import base64
+import json
 
 # --- 1. ADSENSE ---
 components.html("""<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" crossorigin="anonymous"></script>""", height=0)
@@ -23,6 +25,29 @@ if 'money' not in st.session_state:
         'last_tick': time.time(), 
         'view': 'game' 
     })
+
+# --- SAVE/LOAD SYSTEM ---
+def export_save():
+    data = {
+        "m": st.session_state.money,
+        "u": st.session_state.upgrades,
+        "a": st.session_state.abilities_bought,
+        "p": st.session_state.prestige_level,
+        "t": st.session_state.total_earned
+    }
+    return base64.b64encode(json.dumps(data).encode()).decode()
+
+def import_save(code):
+    try:
+        data = json.loads(base64.b64decode(code.encode()).decode())
+        st.session_state.money = data["m"]
+        st.session_state.upgrades = data["u"]
+        st.session_state.abilities_bought = data["a"]
+        st.session_state.prestige_level = data["p"]
+        st.session_state.total_earned = data["t"]
+        return True
+    except:
+        return False
 
 # --- DATA: BUILDINGS ---
 BUILDINGS = {
@@ -72,7 +97,7 @@ shake_anim = "shake-screen 0.2s infinite" if is_surging else "none"
 st.markdown(f"""
     <style>
     .stApp {{ background: #020202; color: #f0f0f0; overflow: hidden; animation: {shake_anim}; }}
-    [data-testid="column"]:nth-child(1) {{ position: fixed; width: 25% !important; left: 0; background: #000; border-right: 2px solid {accent}; height: 100vh; padding: 20px; text-align: center; }}
+    [data-testid="column"]:nth-child(1) {{ position: fixed; width: 25% !important; left: 0; background: #000; border-right: 2px solid {accent}; height: 100vh; padding: 20px; text-align: center; overflow-y: auto; }}
     [data-testid="column"]:nth-child(2) {{ margin-left: 25%; width: 45% !important; background: #050505; min-height: 100vh; padding: 20px !important; }}
     [data-testid="column"]:nth-child(3) {{ position: fixed; width: 30% !important; right: 0; background: #080808; border-left: 2px solid {accent}; height: 100vh; padding: 20px; overflow-y: auto; }}
     
@@ -87,8 +112,7 @@ st.markdown(f"""
     @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
     @keyframes bounce {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     @keyframes pulse {{ 0% {{ transform: scale(1); opacity: 0.7; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(1); opacity: 0.7; }} }}
-    @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-20px); }} }}
-
+    
     .clicker-container {{ position: relative; width: 300px; height: 300px; margin: 10px auto; display: flex; align-items: center; justify-content: center; }}
     .main-clicker {{ font-size: 130px; cursor: pointer; filter: drop-shadow(0 0 30px {accent}); z-index: 10; user-select: none; }}
     .swarming-diamond {{ position: absolute; font-size: 24px; filter: drop-shadow(0 0 8px {accent}); }}
@@ -123,6 +147,7 @@ with l:
     st.markdown(f"<h1>${st.session_state.money:,.0f}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{accent}; font-weight:bold;'>MPS: ${round(get_current_mps() * global_mult, 1)}</p>", unsafe_allow_html=True)
     
+    # Diamond Animations
     siphons = int(st.session_state.upgrades["0"])
     swarm_html = "".join([f'<div class="swarming-diamond" style="left:calc(50% + {130*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); top:calc(50% + {130*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); --rot:{i*(360/min(max(siphons,1),30))+45}deg; --tx:{-30*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px; --ty:{-30*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px; animation: stab 1s infinite {i*0.03}s;">💠</div>' for i in range(min(siphons, 30))])
     st.markdown(f'<div class="clicker-container">{swarm_html}<div class="main-clicker">💎</div></div>', unsafe_allow_html=True)
@@ -145,6 +170,18 @@ with l:
     if st.button("🌳 ABILITY TREE", use_container_width=True):
         st.session_state.view = 'tree' if st.session_state.view == 'game' else 'game'
         st.rerun()
+    
+    st.markdown("---")
+    # NEW SAVE SYSTEM UI
+    st.markdown("<small style='color:#555;'>DATA CORE (SAVE STRING)</small>", unsafe_allow_html=True)
+    st.code(export_save(), language=None)
+    save_input = st.text_input("IMPORT CORE", placeholder="Paste code here...")
+    if st.button("RESTORE DATA"):
+        if import_save(save_input):
+            st.success("Empire Restored!")
+            st.rerun()
+        else:
+            st.error("Invalid Code")
 
 with m:
     if st.session_state.view == 'game':
