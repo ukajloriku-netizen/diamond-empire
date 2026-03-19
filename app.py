@@ -18,13 +18,13 @@ if 'money' not in st.session_state:
         'surge_count': 0, 
         'surge_active': False, 
         'surge_end': 0, 
-        'surge_level': 1, # This tracks how many times you've surged
+        'surge_level': 1, 
         'total_earned': 0, 
         'last_tick': time.time(), 
         'view': 'game' 
     })
 
-# --- DATA: BUILDINGS (ORIGINAL) ---
+# --- DATA: BUILDINGS ---
 BUILDINGS = {
     "0": {"name": "Diamond Siphon", "cost": 15, "pwr": 1, "icon": "💠", "anim": "stab 1s infinite"},
     "1": {"name": "Industrial Scrapper", "cost": 100, "pwr": 5, "icon": "⚙️", "anim": "spin 2s linear infinite"},
@@ -43,7 +43,7 @@ BUILDINGS = {
 # --- DATA: THE 16 ABILITIES ---
 SKILLS = {
     "T1_1": {"name": "Kinetic Storage", "cost": 5000, "desc": "Surge charges 20% faster", "icon": "🔋"},
-    "T1_2": {"name": "Double-Tap", "cost": 15000, "desc": "10th click = 50x power", "icon": "鼠标"},
+    "T1_2": {"name": "Double-Tap", "cost": 15000, "desc": "10th click = 50x power", "icon": "🖱️"},
     "T1_3": {"name": "Siphon Sync", "cost": 30000, "desc": "50+ Siphons = 2x Clicks", "icon": "🔗"},
     "T1_4": {"name": "Flash Extract", "cost": 50000, "desc": "Surge starts at 10x", "icon": "⚡"},
     "T2_1": {"name": "Nano-Opti", "cost": 1e6, "desc": "Prices only rise 12%", "icon": "📉"},
@@ -62,9 +62,7 @@ SKILLS = {
 
 # --- LOGIC ---
 now = time.time()
-# The goal starts at 150 and multiplies by 1.8 for every Surge reached
 surge_goal = 150 * (st.session_state.surge_level ** 1.8)
-
 is_surging = st.session_state.surge_active and now < st.session_state.surge_end
 global_mult = 5 if is_surging else 1
 accent = "#ff00ff" if is_surging else "#00ffcc"
@@ -80,9 +78,6 @@ st.markdown(f"""
     [data-testid="column"]:nth-child(2) {{ margin-left: 25%; width: 45% !important; background: #050505; min-height: 100vh; padding: 20px !important; }}
     [data-testid="column"]:nth-child(3) {{ position: fixed; width: 30% !important; right: 0; background: #080808; border-left: 2px solid {accent}; height: 100vh; padding: 20px; overflow-y: auto; }}
     @keyframes stab {{ 0%, 100% {{ transform: translate(0,0) rotate(var(--rot)); }} 50% {{ transform: translate(var(--tx), var(--ty)) scale(1.6) rotate(var(--rot)); }} }}
-    @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
-    @keyframes bounce {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
-    @keyframes pulse {{ 0% {{ transform: scale(1); opacity: 0.7; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(1); opacity: 0.7; }} }}
     .clicker-container {{ position: relative; width: 300px; height: 300px; margin: 10px auto; display: flex; align-items: center; justify-content: center; }}
     .main-clicker {{ font-size: 130px; cursor: pointer; filter: drop-shadow(0 0 30px {accent}); z-index: 10; user-select: none; }}
     .swarming-diamond {{ position: absolute; font-size: 24px; filter: drop-shadow(0 0 8px {accent}); }}
@@ -90,7 +85,10 @@ st.markdown(f"""
     .boost-fill {{ height: 100%; width: {min((st.session_state.surge_count/surge_goal)*100, 100)}%; background: {accent}; box-shadow: 0 0 15px {accent}; }}
     .shop-card {{ background: #111; padding: 12px; border-radius: 4px; border-left: 4px solid {accent}; margin-bottom: 8px; }}
     .blurred {{ filter: blur(8px); opacity: 0.2; }}
-    .skill-card {{ background: #111; padding: 10px; border: 1px solid #333; border-radius: 5px; margin-bottom: 10px; }}
+    
+    .skill-card {{ background: #111; padding: 12px; border-radius: 6px; border: 1px solid #222; margin-bottom: 12px; transition: 0.2s; }}
+    .skill-bought {{ border: 1px solid {accent}; background: #001a1a; opacity: 0.9; }}
+    .skill-locked {{ filter: grayscale(1); opacity: 0.3; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -100,7 +98,6 @@ with l:
     st.markdown(f"<h1>${st.session_state.money:,.0f}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{accent}; font-weight:bold;'>MPS: ${round(get_current_mps() * global_mult, 1)}</p>", unsafe_allow_html=True)
     
-    # Animations
     siphons = int(st.session_state.upgrades["0"])
     swarm_html = "".join([f'<div class="swarming-diamond" style="left:calc(50% + {130*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); top:calc(50% + {130*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); --rot:{i*(360/min(max(siphons,1),30))+45}deg; --tx:{-30*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px; --ty:{-30*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px; animation: stab 1s infinite {i*0.03}s;">💠</div>' for i in range(min(siphons, 30))])
     st.markdown(f'<div class="clicker-container">{swarm_html}<div class="main-clicker">💎</div></div>', unsafe_allow_html=True)
@@ -114,10 +111,8 @@ with l:
         if not is_surging:
             st.session_state.surge_count += 2.5
             if st.session_state.surge_count >= surge_goal:
-                st.session_state.surge_active = True
-                st.session_state.surge_end = time.time() + 15
-                st.session_state.surge_count = 0
-                st.session_state.surge_level += 1 # MAKES NEXT ONE HARDER
+                st.session_state.surge_active, st.session_state.surge_end, st.session_state.surge_count = True, time.time() + 15, 0
+                st.session_state.surge_level += 1
         st.rerun()
 
     if st.button("🌳 ABILITY TREE", use_container_width=True):
@@ -136,13 +131,22 @@ with m:
         st.markdown("## 🌳 ABILITY TREE")
         for sid, s in SKILLS.items():
             owned = sid in st.session_state.abilities_bought
-            locked = st.session_state.total_earned < s['cost']
-            st.markdown(f"""<div class="skill-card">
-                <b>{s['icon']} {s['name'] if not locked else '🔒 ???'}</b><br>
-                <small>{s['desc'] if not locked else f'Earn ${s["cost"]:,} total'}</small>
+            unlocked = st.session_state.total_earned >= s['cost']
+            
+            # Use specific CSS classes based on status
+            status_class = "skill-bought" if owned else ("" if unlocked else "skill-locked")
+            
+            st.markdown(f"""<div class="skill-card {status_class}">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:18px;">{s['icon']} <b>{s['name'] if unlocked else "???"}</b></span>
+                    <span style="color:{accent}; font-weight:bold;">{ f"OWNED" if owned else f"${s['cost']:,}" }</span>
+                </div>
+                <p style="font-size:12px; color:#888; margin-top:5px;">{s['desc'] if unlocked else "Increase your total earnings to see this skill."}</p>
             </div>""", unsafe_allow_html=True)
-            if not owned and not locked:
-                if st.button(f"BUY {s['name']}", key=sid):
+            
+            # Button only appears if unlocked and not yet owned
+            if unlocked and not owned:
+                if st.button(f"PURCHASE: ${s['cost']:,}", key=f"buy_{sid}", use_container_width=True):
                     if st.session_state.money >= s['cost']:
                         st.session_state.money -= s['cost']
                         st.session_state.abilities_bought.append(sid)
@@ -153,13 +157,12 @@ with r:
     for tid, data in BUILDINGS.items():
         count = int(st.session_state.upgrades[tid])
         cost = int(data['cost'] * (1.15 ** count))
-        unlocked = st.session_state.total_earned >= (data['cost'] * 0.5) or count > 0
-        st.markdown(f"""<div class="shop-card {"blurred" if not unlocked else ""}">
-                <div style="display:flex; justify-content:space-between;"><b>{data['name'] if unlocked else "???"}</b> <span>x{count}</span></div>
+        can_see = st.session_state.total_earned >= (data['cost'] * 0.5) or count > 0
+        st.markdown(f"""<div class="shop-card {"blurred" if not can_see else ""}">
+                <div style="display:flex; justify-content:space-between;"><b>{data['name'] if can_see else "???"}</b> <span>x{count}</span></div>
                 <div style="font-size:18px; font-weight:bold;">${cost:,}</div>
-                <div style="font-size:11px; color:{accent};">{f"+${data['pwr']}/s" if unlocked else "LOCKED"}</div>
             </div>""", unsafe_allow_html=True)
-        if st.button(f"BUY {data['icon'] if unlocked else '🔒'}", key=f"acq_{tid}", use_container_width=True):
+        if st.button(f"BUY {data['icon'] if can_see else '🔒'}", key=f"acq_{tid}", use_container_width=True):
             if st.session_state.money >= cost:
                 st.session_state.money -= cost
                 st.session_state.upgrades[tid] += 1
