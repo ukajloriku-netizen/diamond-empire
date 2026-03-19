@@ -51,7 +51,7 @@ if 'money' not in st.session_state:
         st.session_state.update({'money': 0, 'upgrades': default_upgrades, 'surge_count': 0, 'surge_active': False, 'surge_end': 0, 'level': 1, 'total_earned': 0})
     else:
         st.session_state.update({
-            'money': loaded.get('money', 999999999999999999999999), 
+            'money': loaded.get('money', 0), 
             'upgrades': loaded.get('upgrades', default_upgrades), 
             'surge_count': loaded.get('surge_count', 0), 
             'level': loaded.get('level', 1),
