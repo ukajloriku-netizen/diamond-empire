@@ -5,7 +5,7 @@ import time
 import math
 import os
 
-# --- 1. ADSENSE INJECTION ---
+# --- 1. ADSENSE INJECTION (STAY ONLINE FOR GOOGLE) ---
 components.html(
     """
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" 
@@ -18,43 +18,24 @@ components.html(
 # --- 2. CONFIG (ONLY ONE ALLOWED) ---
 st.set_page_config(page_title="DIAMOND EMPIRE: OVERDRIVE", layout="wide", initial_sidebar_state="collapsed")
 
-# --- SAVING/LOADING ---
+# --- SAVING/LOADING (DISABLED FOR VIDEO STABILITY) ---
 DB_FILE = "empire_grind_save.json"
 
-def save_game():
-    data = {
-        'money': st.session_state.money, 
-        'upgrades': st.session_state.upgrades,
-        'surge_count': st.session_state.surge_count,
-        'level': st.session_state.level,
-        'total_earned': st.session_state.total_earned
-    }
-    with open(DB_FILE, 'w') as f:
-        json.dump(data, f)
-
-def load_game():
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, 'r') as f: return json.load(f)
-        except: return None
-    return None
-
-# --- STATE INITIALIZATION ---
+# --- STATE INITIALIZATION (HACKED FOR VIDEO SHOWCASE) ---
 if 'money' not in st.session_state:
-    loaded = load_game()
-    default_upgrades = {str(k): 0 for k in range(12)} 
-    if not loaded:
-        st.session_state.update({'money': 0, 'upgrades': default_upgrades, 'surge_count': 0, 'surge_active': False, 'surge_end': 0, 'level': 1, 'total_earned': 0})
-    else:
-        st.session_state.update({
-            'money': loaded.get('money', 0), 
-            'upgrades': loaded.get('upgrades', default_upgrades), 
-            'surge_count': loaded.get('surge_count', 0), 
-            'level': loaded.get('level', 1),
-            'total_earned': loaded.get('total_earned', 0),
-            'surge_active': False, 'surge_end': 0
-        })
-    st.session_state.last_tick = time.time()
+    # STARTING WITH 100 OF EVERY ITEM TO SHOW COMPLEXITY
+    default_upgrades = {str(k): 100 for k in range(12)} 
+    
+    st.session_state.update({
+        'money': 999_999_999_999_999, 
+        'upgrades': default_upgrades, 
+        'surge_count': 0, 
+        'surge_active': False, 
+        'surge_end': 0, 
+        'level': 100, 
+        'total_earned': 999_999_999_999_999,
+        'last_tick': time.time()
+    })
 
 # --- THE 12-ITEM ASSET LIST ---
 BUILDINGS = {
@@ -72,31 +53,11 @@ BUILDINGS = {
     "11": {"name": "Universal Reset Core", "cost": 60e12, "pwr": 150e6, "icon": "💎", "anim": "pulse 0.2s infinite"},
 }
 
-# --- HACKER MODE (SECRET SIDEBAR) ---
-with st.sidebar:
-    st.header("🛠️ DEV TOOLS")
-    if st.button("🚀 ADD $1 TRILLION"):
-        st.session_state.money += 1000000000000
-        st.session_state.total_earned += 1000000000000
-        st.rerun()
-    if st.button("🔥 MAX ALL UPGRADES"):
-        for k in st.session_state.upgrades:
-            st.session_state.upgrades[k] += 50
-        st.rerun()
-    if st.button("🧹 RESET SAVE"):
-        if os.path.exists(DB_FILE): os.remove(DB_FILE)
-        st.session_state.clear()
-        st.rerun()
-
 def get_current_mps():
     return sum(int(st.session_state.upgrades[t]) * b['pwr'] for t, b in BUILDINGS.items())
 
 # --- THE GRIND LOGIC ---
 SURGE_GOAL = 150 * (st.session_state.level ** 1.8) 
-next_level_cost = 5000 * (st.session_state.level ** 2.2)
-if st.session_state.total_earned >= next_level_cost:
-    st.session_state.level += 1
-
 is_surging = st.session_state.surge_active and time.time() < st.session_state.surge_end
 multiplier = 5 if is_surging else 1
 accent = "#ff00ff" if is_surging else "#00ffcc"
@@ -159,23 +120,21 @@ with r:
     for tid, data in BUILDINGS.items():
         count = int(st.session_state.upgrades[tid])
         cost = int(data['cost'] * (1.15 ** count))
-        unlocked = st.session_state.total_earned >= (data['cost'] * 0.5) or count > 0
         
         st.markdown(f"""
-            <div class="shop-card {"blurred" if not unlocked else ""}">
+            <div class="shop-card">
                 <div style="display:flex; justify-content:space-between;">
-                    <b>{data['name'] if unlocked else "???"}</b> <span>x{count}</span>
+                    <b>{data['name']}</b> <span>x{count}</span>
                 </div>
                 <div style="font-size:18px; font-weight:bold;">${cost:,}</div>
-                <div style="font-size:11px; color:{accent};">{f"+${data['pwr']}/s" if unlocked else "LOCKED"}</div>
+                <div style="font-size:11px; color:{accent};">+${data['pwr']}/s</div>
             </div>
         """, unsafe_allow_html=True)
         
-        if st.button(f"BUY {data['icon'] if unlocked else '🔒'}", key=f"acq_{tid}", use_container_width=True):
+        if st.button(f"BUY {data['icon']}", key=f"acq_{tid}", use_container_width=True):
             if st.session_state.money >= cost:
                 st.session_state.money -= cost
                 st.session_state.upgrades[tid] += 1
-                save_game()
                 st.rerun()
 
 # --- TICK ENGINE ---
