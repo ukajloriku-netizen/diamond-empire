@@ -4,21 +4,10 @@ import time
 import math
 import os
 
-# --- 1. THE BRAIN ---
+# --- CONFIG ---
 st.set_page_config(page_title="DIAMOND EMPIRE: OVERDRIVE", layout="wide", initial_sidebar_state="collapsed")
 
-# --- 2. THE GOOGLE CODE (This is the "Snippet" you see) ---
-st.components.v1.html(
-    """
-    <head>
-        <meta name="google-adsense-account" content="ca-pub-8679117636092243">
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" crossorigin="anonymous"></script>
-    </head>
-    """,
-    height=0,
-)
-# ... (Keep all your game logic, BUILDINGS, and CSS below this)
-# --- 2. SAVING/LOADING ---
+# --- SAVING/LOADING ---
 DB_FILE = "empire_grind_save.json"
 
 def save_game():
@@ -39,7 +28,7 @@ def load_game():
         except: return None
     return None
 
-# --- 3. STATE INITIALIZATION ---
+# --- STATE INITIALIZATION ---
 if 'money' not in st.session_state:
     loaded = load_game()
     default_upgrades = {str(k): 0 for k in range(12)} 
@@ -56,7 +45,7 @@ if 'money' not in st.session_state:
         })
     st.session_state.last_tick = time.time()
 
-# --- 4. THE 12-ITEM ASSET LIST ---
+# --- THE 12-ITEM ASSET LIST ---
 BUILDINGS = {
     "0": {"name": "Diamond Siphon", "cost": 15, "pwr": 1, "icon": "💠", "anim": "stab 1s infinite"},
     "1": {"name": "Industrial Scrapper", "cost": 100, "pwr": 5, "icon": "⚙️", "anim": "spin 2s linear infinite"},
@@ -75,8 +64,11 @@ BUILDINGS = {
 def get_current_mps():
     return sum(int(st.session_state.upgrades[t]) * b['pwr'] for t, b in BUILDINGS.items())
 
-# --- 5. THE GRIND LOGIC ---
+# --- THE GRIND LOGIC ---
+# Every level increases the Surge requirement by a power of 1.8 (Harder Grind)
 SURGE_GOAL = 150 * (st.session_state.level ** 1.8) 
+
+# Progression for Leveling Up
 next_level_cost = 5000 * (st.session_state.level ** 2.2)
 if st.session_state.total_earned >= next_level_cost:
     st.session_state.level += 1
@@ -117,17 +109,19 @@ with l:
     st.markdown(f"<h1>${st.session_state.money:,.0f}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{accent}; font-weight:bold;'>MPS: ${round(get_current_mps() * multiplier, 1)}</p>", unsafe_allow_html=True)
     
+    # SWARMING EFFECT
     siphons = int(st.session_state.upgrades["0"])
     swarm_html = "".join([f'<div class="swarming-diamond" style="left:calc(50% + {150*math.cos(math.radians(i*(360/min(siphons,30))))}px - 12px); top:calc(50% + {150*math.sin(math.radians(i*(360/min(siphons,30))))}px - 12px); --rot:{i*(360/min(siphons,30))+45}deg; --tx:{-30*math.cos(math.radians(i*(360/min(siphons,30))))}px; --ty:{-30*math.sin(math.radians(i*(360/min(siphons,30))))}px; animation: stab 1s infinite {i*0.03}s;">💠</div>' for i in range(min(siphons, 30))])
     st.markdown(f'<div class="clicker-container">{swarm_html}<div class="main-clicker">💎</div></div>', unsafe_allow_html=True)
 
+    # SURGE BOOST BAR (GETS HARDER PER LEVEL)
     st.markdown(f"<small>5X SURGE PROGRESS (LV.{st.session_state.level})</small>", unsafe_allow_html=True)
     st.markdown(f'<div class="boost-container"><div class="boost-fill"></div></div>', unsafe_allow_html=True)
 
     if st.button("MANUAL EXTRACT", use_container_width=True):
         st.session_state.money += (1 + (get_current_mps() * 0.1)) * multiplier
         st.session_state.total_earned += (1 + (get_current_mps() * 0.1)) * multiplier
-        st.session_state.surge_count += 2.5 
+        st.session_state.surge_count += 2.5 # Manual clicks charge the 5x boost
         st.rerun()
 
 with m:
@@ -137,11 +131,6 @@ with m:
         if count > 0:
             icons = "".join([f'<div style="font-size:30px; display:inline-block; animation: {data["anim"]}; margin:2px;">{data["icon"]}</div>' for _ in range(min(count, 40))])
             st.markdown(f'<div style="background:rgba(255,255,255,0.02); padding:10px; margin-bottom:10px; border-bottom:1px solid #222;">{icons}</div>', unsafe_allow_html=True)
-
-    # --- ABOUT & PRIVACY FOR GOOGLE ---
-    st.markdown("---")
-    st.subheader("Diamond Empire: Info")
-    st.write("An industrial mining simulation. No user data is collected.")
 
 with r:
     st.markdown("<h4 style='text-align:center; color:#444;'>MARKET</h4>", unsafe_allow_html=True)
@@ -175,15 +164,10 @@ if elapsed >= 1.0:
     st.session_state.total_earned += (get_current_mps() * multiplier * elapsed)
     
     if not is_surging:
+        # Siphons charge the boost bar automatically
         st.session_state.surge_count += (siphons * 0.5 * elapsed)
         if st.session_state.surge_count >= SURGE_GOAL:
             st.session_state.surge_active, st.session_state.surge_end, st.session_state.surge_count = True, now + 15, 0
             
     st.session_state.last_tick = now
     st.rerun()
-
-st.markdown("---")
-st.write("### 🎮 Diamond Empire: Official Technical Specifications")
-st.write("- **Engine:** Python-based Incremental Logic")
-st.write("- **Economy:** Exponential Scaling with Level-based Surge Mechanics")
-st.write("- **Privacy:** 100% Client-Side Session Storage (No Data Collection)")
