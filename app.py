@@ -50,14 +50,6 @@ SKILLS = {
     "T2_2": {"name": "Recycle Prot", "cost": 5e6, "desc": "20% cost back on Milestones", "icon": "♻️"},
     "T2_3": {"name": "Overdrive Gears", "cost": 20e6, "desc": "Scrappers +2% per Level", "icon": "⚙️"},
     "T2_4": {"name": "Auto Repairs", "desc": "Idle 60s = 1.2x MPS", "cost": 50e6, "icon": "🛠️"},
-    "T3_1": {"name": "Dark Matter Filter", "cost": 500e6, "desc": "Keep 5% of buildings", "icon": "🌑"},
-    "T3_2": {"name": "Prestige Catalyst", "cost": 1e9, "desc": "Bonus for unspent cash", "icon": "🧪"},
-    "T3_3": {"name": "Quantum Stability", "cost": 5e9, "desc": "Scaling 30% slower", "icon": "⚖️"},
-    "T3_4": {"name": "Dim. Insurance", "cost": 10e9, "desc": "Start with 50% Surge bar", "icon": "🛡️"},
-    "T4_1": {"name": "Time-Warp", "cost": 100e9, "desc": "Miners fast-forward 30s", "icon": "⏳"},
-    "T4_2": {"name": "Singularity", "cost": 500e9, "desc": "Clicks add Passive MPS", "icon": "🕳️"},
-    "T4_3": {"name": "Galaxy Mirror", "cost": 1e12, "desc": "MPS x Unlocked Items", "icon": "🪞"},
-    "T4_4": {"name": "Univ. Overlord", "cost": 5e12, "desc": "Triple T1 & T2 Powers", "icon": "👑"},
 }
 
 # --- LOGIC ---
@@ -95,12 +87,10 @@ st.markdown(f"""
     @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
     @keyframes bounce {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     @keyframes pulse {{ 0% {{ transform: scale(1); opacity: 0.7; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(1); opacity: 0.7; }} }}
-    @keyframes shake {{ 0% {{ transform: translate(1px, 1px) rotate(0deg); }} 10% {{ transform: translate(-1px, -2px) rotate(-1deg); }} 100% {{ transform: translate(1px, -2px) rotate(-1deg); }} }}
     @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-20px); }} }}
 
     .clicker-container {{ position: relative; width: 300px; height: 300px; margin: 10px auto; display: flex; align-items: center; justify-content: center; }}
-    .main-clicker {{ font-size: 130px; cursor: pointer; filter: drop-shadow(0 0 30px {accent}); z-index: 10; user-select: none; transition: 0.1s; }}
-    .main-clicker:active {{ transform: scale(0.9); }}
+    .main-clicker {{ font-size: 130px; cursor: pointer; filter: drop-shadow(0 0 30px {accent}); z-index: 10; user-select: none; }}
     .swarming-diamond {{ position: absolute; font-size: 24px; filter: drop-shadow(0 0 8px {accent}); }}
     .boost-container {{ width: 100%; background: #111; height: 18px; border-radius: 9px; border: 1px solid #333; overflow: hidden; margin-top: 10px; }}
     .boost-fill {{ height: 100%; width: {min((st.session_state.surge_count/surge_goal)*100, 100)}%; background: {accent}; box-shadow: 0 0 15px {accent}; transition: width 0.3s; }}
@@ -112,6 +102,7 @@ st.markdown(f"""
     <script>
     function playSurgeSound() {{
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === 'suspended') ctx.resume();
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = 'sawtooth';
@@ -184,7 +175,15 @@ with r:
         count = int(st.session_state.upgrades[tid])
         cost = int(data['cost'] * (1.15 ** count))
         unlocked = st.session_state.total_earned >= (data['cost'] * 0.5) or count > 0
-        st.markdown(f"""<div class="shop-card {"blurred" if not unlocked else ""}"><div style="display:flex; justify-content:space-between;"><b>{data['name'] if unlocked else "???"}</b> <span>x{count}</span></div><div style="font-size:18px; font-weight:bold;">${cost:,}</div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""
+            <div class="shop-card {"blurred" if not unlocked else ""}">
+                <div style="display:flex; justify-content:space-between;">
+                    <b>{data['name'] if unlocked else "???"}</b> 
+                    <span>x{count}</span>
+                </div>
+                <div style="font-size:18px; font-weight:bold;">${cost:,}</div>
+                <div style="font-size:11px; color:{accent};">+{data['pwr']} MPS Base</div>
+            </div>""", unsafe_allow_html=True)
         if st.button(f"BUY {data['icon'] if unlocked else '🔒'}", key=f"acq_{tid}", use_container_width=True):
             if st.session_state.money >= cost:
                 st.session_state.money -= cost
