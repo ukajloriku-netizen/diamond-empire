@@ -181,3 +181,9 @@ if elapsed >= 1.0:
             
     st.session_state.last_tick = now
     st.rerun()
+
+st.markdown("---")
+st.write("### 🎮 Diamond Empire: Official Technical Specifications")
+st.write("- **Engine:** Python-based Incremental Logic")
+st.write("- **Economy:** Exponential Scaling with Level-based Surge Mechanics")
+st.write("- **Privacy:** 100% Client-Side Session Storage (No Data Collection)")
