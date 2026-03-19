@@ -1,3 +1,12 @@
+st.components.v1.html(
+    """
+    <head>
+        <meta name="google-adsense-account" content="ca-pub-8679117636092243">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" crossorigin="anonymous"></script>
+    </head>
+    """,
+    height=0,
+)
 import streamlit as st
 import json
 import time
