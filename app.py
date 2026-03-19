@@ -18,13 +18,13 @@ if 'money' not in st.session_state:
         'surge_count': 0, 
         'surge_active': False, 
         'surge_end': 0, 
-        'prestige_level': 0, # THIS IS YOUR PRESTIGE
+        'prestige_level': 0, 
         'total_earned': 0, 
         'last_tick': time.time(), 
         'view': 'game' 
     })
 
-# --- DATA: BUILDINGS (ALL ANIMATIONS RESTORED) ---
+# --- DATA: BUILDINGS ---
 BUILDINGS = {
     "0": {"name": "Diamond Siphon", "cost": 15, "pwr": 1, "icon": "💠", "anim": "stab 1s infinite"},
     "1": {"name": "Industrial Scrapper", "cost": 100, "pwr": 5, "icon": "⚙️", "anim": "spin 2s linear infinite"},
@@ -40,22 +40,22 @@ BUILDINGS = {
     "11": {"name": "Universal Reset Core", "cost": 60e12, "pwr": 150e6, "icon": "💎", "anim": "pulse 0.2s infinite"},
 }
 
-# --- DATA: ABILITIES ---
+# --- DATA: ABILITIES (Full List) ---
 SKILLS = {
     "T1_1": {"name": "Kinetic Storage", "cost": 5000, "desc": "Surge charges 20% faster", "icon": "🔋"},
     "T1_2": {"name": "Double-Tap", "cost": 15000, "desc": "10th click = 50x power", "icon": "🖱️"},
+    "T1_3": {"name": "Siphon Sync", "cost": 30000, "desc": "50+ Siphons = 2x Clicks", "icon": "🔗"},
+    "T1_4": {"name": "Flash Extract", "cost": 50000, "desc": "Surge starts at 10x", "icon": "⚡"},
     "T2_1": {"name": "Nano-Opti", "cost": 1e6, "desc": "Prices only rise 12%", "icon": "📉"},
-    "T3_3": {"name": "Quantum Stability", "cost": 5e9, "desc": "Hard scaling 30% slower", "icon": "⚖️"},
-    # ... (other skills stay in the logic)
+    "T2_2": {"name": "Recycle Prot", "cost": 5e6, "desc": "20% cost back on Milestones", "icon": "♻️"},
+    "T2_3": {"name": "Overdrive Gears", "cost": 20e6, "desc": "Scrappers +2% per Level", "icon": "⚙️"},
+    "T2_4": {"name": "Auto Repairs", "desc": "Idle 60s = 1.2x MPS", "cost": 50e6, "icon": "🛠️"},
 }
 
 # --- LOGIC ---
 now = time.time()
-# Surge Goal gets harder every prestige level
-scaling = 1.3 if "T3_3" in st.session_state.abilities_bought else 1.8
+scaling = 1.8
 surge_goal = 150 * (scaling ** st.session_state.prestige_level)
-
-# Prestige Multiplier: Each surge level gives +25% permanent boost
 prestige_boost = 1 + (st.session_state.prestige_level * 0.25)
 
 is_surging = st.session_state.surge_active and now < st.session_state.surge_end
@@ -66,7 +66,7 @@ def get_current_mps():
     base = sum(int(st.session_state.upgrades[t]) * b['pwr'] for t, b in BUILDINGS.items())
     return base * prestige_boost
 
-# --- CSS (ANIMATIONS RESTORED) ---
+# --- CSS (ANIMATIONS & BLUR) ---
 st.markdown(f"""
     <style>
     .stApp {{ background: #020202; color: #f0f0f0; overflow: hidden; }}
@@ -78,16 +78,15 @@ st.markdown(f"""
     @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
     @keyframes bounce {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     @keyframes pulse {{ 0% {{ transform: scale(1); opacity: 0.7; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(1); opacity: 0.7; }} }}
-    @keyframes shake {{ 0% {{ transform: translate(1px, 1px) rotate(0deg); }} 10% {{ transform: translate(-1px, -2px) rotate(-1deg); }} 100% {{ transform: translate(1px, -2px) rotate(-1deg); }} }}
-    @keyframes float {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-20px); }} }}
-
+    
     .clicker-container {{ position: relative; width: 300px; height: 300px; margin: 10px auto; display: flex; align-items: center; justify-content: center; }}
     .main-clicker {{ font-size: 130px; cursor: pointer; filter: drop-shadow(0 0 30px {accent}); z-index: 10; user-select: none; }}
     .swarming-diamond {{ position: absolute; font-size: 24px; filter: drop-shadow(0 0 8px {accent}); }}
     .boost-container {{ width: 100%; background: #111; height: 18px; border-radius: 9px; border: 1px solid #333; overflow: hidden; margin-top: 10px; }}
     .boost-fill {{ height: 100%; width: {min((st.session_state.surge_count/surge_goal)*100, 100)}%; background: {accent}; box-shadow: 0 0 15px {accent}; }}
     .shop-card {{ background: #111; padding: 12px; border-radius: 4px; border-left: 4px solid {accent}; margin-bottom: 8px; }}
-    .blurred {{ filter: blur(8px); opacity: 0.2; }}
+    .blurred {{ filter: blur(12px); opacity: 0.3; pointer-events: none; }}
+    .skill-card {{ background: #111; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #444; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -98,12 +97,14 @@ with l:
     st.markdown(f"<h1>${st.session_state.money:,.0f}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{accent}; font-weight:bold;'>MPS: ${round(get_current_mps() * global_mult, 1)}</p>", unsafe_allow_html=True)
     
-    # Restored Swarm
     siphons = int(st.session_state.upgrades["0"])
     swarm_html = "".join([f'<div class="swarming-diamond" style="left:calc(50% + {130*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); top:calc(50% + {130*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); --rot:{i*(360/min(max(siphons,1),30))+45}deg; --tx:{-30*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px; --ty:{-30*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px; animation: stab 1s infinite {i*0.03}s;">💠</div>' for i in range(min(siphons, 30))])
     st.markdown(f'<div class="clicker-container">{swarm_html}<div class="main-clicker">💎</div></div>', unsafe_allow_html=True)
 
+    # SURGE TEXT BACK
+    st.markdown(f"<div style='text-align:center;'><small>{int(st.session_state.surge_count)} / {int(surge_goal)} CHARGE</small></div>", unsafe_allow_html=True)
     st.markdown(f'<div class="boost-container"><div class="boost-fill"></div></div>', unsafe_allow_html=True)
+    
     if st.button("MANUAL EXTRACT", use_container_width=True):
         st.session_state.money += (1 + (get_current_mps() * 0.1)) * global_mult
         st.session_state.total_earned += (1 + (get_current_mps() * 0.1)) * global_mult
@@ -112,7 +113,7 @@ with l:
             if st.session_state.surge_count >= surge_goal:
                 st.session_state.surge_active, st.session_state.surge_end = True, time.time() + 15
                 st.session_state.surge_count = 0
-                st.session_state.prestige_level += 1 # Supernova Scaling Happens Here
+                st.session_state.prestige_level += 1 
         st.rerun()
 
     if st.button("🌳 ABILITY TREE", use_container_width=True):
@@ -125,22 +126,32 @@ with m:
         for tid, data in BUILDINGS.items():
             count = int(st.session_state.upgrades[tid])
             if count > 0:
-                # ALL ICONS WITH ANIMATIONS RESTORED
                 icons = "".join([f'<div style="font-size:30px; display:inline-block; animation: {data["anim"]}; margin:5px;">{data["icon"]}</div>' for _ in range(min(count, 40))])
                 st.markdown(f'<div style="background:rgba(255,255,255,0.02); padding:10px; margin-bottom:10px; border-bottom:1px solid #222;">{icons}</div>', unsafe_allow_html=True)
     else:
-        # Ability Tree with Prices
         st.markdown("## 🌳 ABILITY TREE")
         for sid, s in SKILLS.items():
             owned = sid in st.session_state.abilities_bought
-            st.markdown(f"**{s['icon']} {s['name']}** - {s['desc']}")
-            if not owned:
-                if st.button(f"PURCHASE: ${s['cost']:,}", key=sid):
+            locked = st.session_state.total_earned < s['cost']
+            
+            # BLUR LOGIC FOR ABILITIES
+            blur_class = "blurred" if locked else ""
+            
+            st.markdown(f"""<div class="skill-card {blur_class}">
+                <div style="display:flex; justify-content:space-between;">
+                    <b>{s['icon']} {s['name'] if not locked else "???"}</b>
+                    <span style="color:gold;">${s['cost']:,}</span>
+                </div>
+                <small>{s['desc'] if not locked else "Keep mining to unlock this info."}</small>
+            </div>""", unsafe_allow_html=True)
+            
+            if not locked and not owned:
+                if st.button(f"PURCHASE {s['name']}", key=sid, use_container_width=True):
                     if st.session_state.money >= s['cost']:
                         st.session_state.money -= s['cost']
                         st.session_state.abilities_bought.append(sid)
                         st.rerun()
-            else:
+            elif owned:
                 st.success("OWNED")
 
 with r:
