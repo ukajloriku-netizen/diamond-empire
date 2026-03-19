@@ -34,7 +34,7 @@ BUILDINGS = {
     "11": {"name": "Universal Reset Core", "cost": 60e12, "pwr": 150e6, "icon": "💎", "anim": "pulse 0.2s infinite"},
 }
 
-# --- DATA: THE 16 ABILITIES ---
+# --- DATA: THE 16 ABILITIES (AS REQUESTED) ---
 SKILLS = {
     "T1_1": {"name": "Kinetic Storage", "cost": 5000, "desc": "Surge charges 20% faster", "icon": "🔋"},
     "T1_2": {"name": "Double-Tap", "cost": 15000, "desc": "10th click = 50x power", "icon": "🖱️"},
@@ -54,15 +54,12 @@ SKILLS = {
     "T4_4": {"name": "Univ. Overlord", "cost": 5e12, "desc": "Triple T1 & T2 Powers", "icon": "👑"},
 }
 
-# --- LOGIC & SCALING ---
+# --- LOGIC ---
 now = time.time()
-# SCALING SUPERNOVA COST: Starts at 10B, grows by 2.5x per Prestige Level
-scaling_factor = 1.3 if "T3_3" in st.session_state.abilities_bought else 1.5
+scaling_factor = 1.3 if "T3_3" in st.session_state.abilities_bought else 2.5
 supernova_goal = 10_000_000_000 * (scaling_factor ** st.session_state.prestige_points)
 
-prestige_mult = 1 + (st.session_state.prestige_points * 0.15)
-if "T4_4" in st.session_state.abilities_bought: prestige_mult *= 1.5 # Overlord buff
-
+prestige_mult = 1 + (st.session_state.prestige_points * 0.25) # 25% per point
 is_surging = st.session_state.surge_active and now < st.session_state.surge_end
 global_mult = 5 if is_surging else 1
 accent = "#ff00ff" if is_surging else "#00ffcc"
@@ -71,17 +68,19 @@ def get_current_mps():
     base = sum(int(st.session_state.upgrades[t]) * b['pwr'] for t, b in BUILDINGS.items())
     return base * prestige_mult
 
-# --- CSS (RESTORED ANIMATIONS) ---
+# --- CSS (ANIMATIONS RESTORED) ---
 st.markdown(f"""
     <style>
     .stApp {{ background: #020202; color: #f0f0f0; overflow: hidden; }}
     [data-testid="column"]:nth-child(1) {{ position: fixed; width: 25% !important; left: 0; background: #000; border-right: 2px solid {accent}; height: 100vh; padding: 20px; text-align: center; }}
     [data-testid="column"]:nth-child(2) {{ margin-left: 25%; width: 45% !important; background: #050505; min-height: 100vh; padding: 20px !important; }}
     [data-testid="column"]:nth-child(3) {{ position: fixed; width: 30% !important; right: 0; background: #080808; border-left: 2px solid {accent}; height: 100vh; padding: 20px; overflow-y: auto; }}
+    
     @keyframes stab {{ 0%, 100% {{ transform: translate(0,0) rotate(var(--rot)); }} 50% {{ transform: translate(var(--tx), var(--ty)) scale(1.6) rotate(var(--rot)); }} }}
     @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
     @keyframes bounce {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     @keyframes pulse {{ 0% {{ transform: scale(1); opacity: 0.7; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(1); opacity: 0.7; }} }}
+    
     .clicker-container {{ position: relative; width: 300px; height: 300px; margin: 10px auto; display: flex; align-items: center; justify-content: center; }}
     .main-clicker {{ font-size: 130px; cursor: pointer; filter: drop-shadow(0 0 30px {accent}); z-index: 10; user-select: none; }}
     .swarming-diamond {{ position: absolute; font-size: 24px; filter: drop-shadow(0 0 8px {accent}); }}
@@ -89,14 +88,15 @@ st.markdown(f"""
     .boost-fill {{ height: 100%; width: {min((st.session_state.surge_count/(150*(st.session_state.level**1.8)))*100, 100)}%; background: {accent}; box-shadow: 0 0 15px {accent}; }}
     .shop-card {{ background: #111; padding: 12px; border-radius: 4px; border-left: 4px solid {accent}; margin-bottom: 8px; }}
     .blurred {{ filter: blur(8px); opacity: 0.2; }}
-    .skill-box {{ background: #111; padding: 10px; border: 1px solid #333; border-radius: 5px; margin-bottom: 5px; }}
-    .skill-owned {{ border: 1px solid {accent}; background: #001a1a; }}
+    .skill-card {{ background: #111; padding: 10px; border: 1px solid #333; border-radius: 5px; margin-bottom: 10px; }}
+    .skill-bought {{ border: 1px solid {accent}; background: #001a1a; }}
     </style>
     """, unsafe_allow_html=True)
 
 l, m, r = st.columns([1, 1.8, 1.2])
 
 with l:
+    st.markdown(f"<small style='color:gold;'>✨ PRESTIGE LV.{st.session_state.prestige_points}</small>", unsafe_allow_html=True)
     st.markdown(f"<h1>${st.session_state.money:,.0f}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{accent}; font-weight:bold;'>MPS: ${round(get_current_mps() * global_mult, 1)}</p>", unsafe_allow_html=True)
     
@@ -107,9 +107,9 @@ with l:
 
     st.markdown(f'<div class="boost-container"><div class="boost-fill"></div></div>', unsafe_allow_html=True)
     if st.button("MANUAL EXTRACT", use_container_width=True):
-        click_val = (1 + (get_current_mps() * 0.1)) * global_mult
-        st.session_state.money += click_val
-        st.session_state.total_earned += click_val
+        click_pow = (1 + (get_current_mps() * 0.1)) * global_mult
+        st.session_state.money += click_pow
+        st.session_state.total_earned += click_pow
         st.session_state.surge_count += 2.5 
         st.rerun()
 
@@ -119,34 +119,40 @@ with l:
 
 with m:
     if st.session_state.view == 'game':
+        # --- PRESTIGE SECTION (ALWAYS VISIBLE NOW) ---
+        st.markdown(f"### ✨ SUPERNOVA PROGRESS")
+        prog = min(st.session_state.money / supernova_goal, 1.0)
+        st.progress(prog)
+        st.markdown(f"<small>Goal: ${supernova_goal:,.0f}</small>", unsafe_allow_html=True)
+        
         if st.session_state.money >= supernova_goal:
             pts = int(st.session_state.money / supernova_goal)
-            if st.button(f"✨ SUPERNOVA RESET (+{pts} PTS)", use_container_width=True):
+            if st.button(f"🔥 PERFORM SUPERNOVA (+{pts} PRESTIGE)", use_container_width=True):
                 st.session_state.prestige_points += pts
-                st.session_state.money, st.session_state.upgrades = 0, {str(k): 0 for k in range(12)}
+                st.session_state.money = 0
+                st.session_state.upgrades = {str(k): 0 for k in range(12)}
                 st.rerun()
-        else:
-            st.caption(f"Next Supernova at ${supernova_goal:,.0f}")
 
         st.markdown("<h3 style='color:#333;'>PRODUCTION SECTORS</h3>", unsafe_allow_html=True)
         for tid, data in BUILDINGS.items():
             count = int(st.session_state.upgrades[tid])
             if count > 0:
                 icons = "".join([f'<div style="font-size:30px; display:inline-block; animation: {data["anim"]}; margin:2px;">{data["icon"]}</div>' for _ in range(min(count, 40))])
-                st.markdown(f'<div style="background:rgba(255,255,255,0.02); padding:10px; margin-bottom:10px; border-bottom:1px solid #222;">{icons}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div style="background:rgba(255,255,255,0.02); padding:10px; margin-bottom:10px;">{icons}</div>', unsafe_allow_html=True)
     else:
+        # --- ABILITY TREE ---
         st.markdown("## 🌳 ABILITY TREE")
         for sid, s in SKILLS.items():
             owned = sid in st.session_state.abilities_bought
             locked = st.session_state.total_earned < s['cost']
             
-            st.markdown(f"""<div class="skill-box {'skill-owned' if owned else ''}">
+            st.markdown(f"""<div class="skill-card {'skill-bought' if owned else ''}">
                 <b>{s['icon']} {s['name'] if not locked else '🔒 ???'}</b><br>
-                <small>{s['desc'] if not locked else f'Reach ${s["cost"]:,} total earned'}</small>
+                <small>{s['desc'] if not locked else f'Locked until ${s["cost"]:,} earned'}</small>
             </div>""", unsafe_allow_html=True)
             
             if not owned and not locked:
-                if st.button(f"UNLOCK {s['name']} (${s['cost']:,})", key=sid):
+                if st.button(f"UNLOCK {s['name']}", key=f"btn_{sid}"):
                     if st.session_state.money >= s['cost']:
                         st.session_state.money -= s['cost']
                         st.session_state.abilities_bought.append(sid)
