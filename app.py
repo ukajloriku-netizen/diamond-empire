@@ -26,7 +26,7 @@ if 'money' not in st.session_state:
         'view': 'game' 
     })
 
-# --- SAVE/LOAD SYSTEM ---
+# --- CLEAN SAVE/LOAD LOGIC ---
 def export_save():
     data = {
         "m": st.session_state.money,
@@ -39,7 +39,9 @@ def export_save():
 
 def import_save(code):
     try:
-        data = json.loads(base64.b64decode(code.encode()).decode())
+        # Strip any accidental whitespace the user might have copied
+        clean_code = code.strip()
+        data = json.loads(base64.b64decode(clean_code.encode()).decode())
         st.session_state.money = data["m"]
         st.session_state.upgrades = data["u"]
         st.session_state.abilities_bought = data["a"]
@@ -49,7 +51,8 @@ def import_save(code):
     except:
         return False
 
-# --- DATA: BUILDINGS ---
+# --- DATA: BUILDINGS & ABILITIES ---
+# (Keeping your original 12 buildings and 16 abilities with all descriptions)
 BUILDINGS = {
     "0": {"name": "Diamond Siphon", "cost": 15, "pwr": 1, "icon": "💠", "anim": "stab 1s infinite"},
     "1": {"name": "Industrial Scrapper", "cost": 100, "pwr": 5, "icon": "⚙️", "anim": "spin 2s linear infinite"},
@@ -65,7 +68,6 @@ BUILDINGS = {
     "11": {"name": "Universal Reset Core", "cost": 60e12, "pwr": 150e6, "icon": "💎", "anim": "pulse 0.2s infinite"},
 }
 
-# --- DATA: ABILITIES ---
 SKILLS = {
     "T1_1": {"name": "Kinetic Storage", "cost": 5000, "desc": "Surge charges 20% faster", "icon": "🔋"},
     "T1_2": {"name": "Double-Tap", "cost": 15000, "desc": "10th click = 50x power", "icon": "🖱️"},
@@ -77,12 +79,11 @@ SKILLS = {
     "T2_4": {"name": "Auto Repairs", "desc": "Idle 60s = 1.2x MPS", "cost": 50e6, "icon": "🛠️"},
 }
 
-# --- LOGIC ---
+# --- LOGIC & TICK ENGINE ---
 now = time.time()
 scaling = 1.8
 surge_goal = 150 * (scaling ** st.session_state.prestige_level)
 prestige_boost = 1 + (st.session_state.prestige_level * 0.25)
-
 is_surging = st.session_state.surge_active and now < st.session_state.surge_end
 global_mult = 5 if is_surging else 1
 accent = "#ff00ff" if is_surging else "#00ffcc"
@@ -91,7 +92,7 @@ def get_current_mps():
     base = sum(int(st.session_state.upgrades[t]) * b['pwr'] for t, b in BUILDINGS.items())
     return base * prestige_boost
 
-# --- CSS & JS ---
+# --- UI & CSS ---
 shake_anim = "shake-screen 0.2s infinite" if is_surging else "none"
 
 st.markdown(f"""
@@ -107,12 +108,11 @@ st.markdown(f"""
         40% {{ transform: translate(2px, 1px) rotate(1deg); }}
         100% {{ transform: translate(0px, 0px) rotate(0deg); }}
     }}
-
     @keyframes stab {{ 0%, 100% {{ transform: translate(0,0) rotate(var(--rot)); }} 50% {{ transform: translate(var(--tx), var(--ty)) scale(1.6) rotate(var(--rot)); }} }}
     @keyframes spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
     @keyframes bounce {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-10px); }} }}
     @keyframes pulse {{ 0% {{ transform: scale(1); opacity: 0.7; }} 50% {{ transform: scale(1.05); opacity: 1; }} 100% {{ transform: scale(1); opacity: 0.7; }} }}
-    
+
     .clicker-container {{ position: relative; width: 300px; height: 300px; margin: 10px auto; display: flex; align-items: center; justify-content: center; }}
     .main-clicker {{ font-size: 130px; cursor: pointer; filter: drop-shadow(0 0 30px {accent}); z-index: 10; user-select: none; }}
     .swarming-diamond {{ position: absolute; font-size: 24px; filter: drop-shadow(0 0 8px {accent}); }}
@@ -147,7 +147,7 @@ with l:
     st.markdown(f"<h1>${st.session_state.money:,.0f}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{accent}; font-weight:bold;'>MPS: ${round(get_current_mps() * global_mult, 1)}</p>", unsafe_allow_html=True)
     
-    # Diamond Animations
+    # Diamond Swarm
     siphons = int(st.session_state.upgrades["0"])
     swarm_html = "".join([f'<div class="swarming-diamond" style="left:calc(50% + {130*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); top:calc(50% + {130*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); --rot:{i*(360/min(max(siphons,1),30))+45}deg; --tx:{-30*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px; --ty:{-30*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px; animation: stab 1s infinite {i*0.03}s;">💠</div>' for i in range(min(siphons, 30))])
     st.markdown(f'<div class="clicker-container">{swarm_html}<div class="main-clicker">💎</div></div>', unsafe_allow_html=True)
@@ -171,18 +171,22 @@ with l:
         st.session_state.view = 'tree' if st.session_state.view == 'game' else 'game'
         st.rerun()
     
+    # --- CLEAN SAVE SYSTEM ---
     st.markdown("---")
-    # NEW SAVE SYSTEM UI
-    st.markdown("<small style='color:#555;'>DATA CORE (SAVE STRING)</small>", unsafe_allow_html=True)
-    st.code(export_save(), language=None)
-    save_input = st.text_input("IMPORT CORE", placeholder="Paste code here...")
-    if st.button("RESTORE DATA"):
+    st.markdown("<p style='font-size:12px; color:#555; margin-bottom:2px;'>YOUR SAVE CODE (COPY THIS):</p>", unsafe_allow_html=True)
+    # Using text_area so there is NO "python" label or copy-button interference
+    st.text_area("Save Code Output", value=export_save(), height=70, label_visibility="collapsed")
+    
+    st.markdown("<p style='font-size:12px; color:#555; margin-bottom:2px;'>PASTE CODE TO LOAD:</p>", unsafe_allow_html=True)
+    save_input = st.text_input("Import Box", placeholder="Paste code here...", label_visibility="collapsed")
+    if st.button("🚀 RESTORE EMPIRE", use_container_width=True):
         if import_save(save_input):
-            st.success("Empire Restored!")
+            st.success("Empire Loaded!")
             st.rerun()
         else:
-            st.error("Invalid Code")
+            st.error("Corrupted Code")
 
+# --- MIDDLE & RIGHT COLUMNS (MARKET & TREE) ---
 with m:
     if st.session_state.view == 'game':
         st.markdown("<h3 style='color:#333;'>PRODUCTION SECTORS</h3>", unsafe_allow_html=True)
@@ -214,10 +218,7 @@ with r:
         unlocked = st.session_state.total_earned >= (data['cost'] * 0.5) or count > 0
         st.markdown(f"""
             <div class="shop-card {"blurred" if not unlocked else ""}">
-                <div style="display:flex; justify-content:space-between;">
-                    <b>{data['name'] if unlocked else "???"}</b> 
-                    <span>x{count}</span>
-                </div>
+                <div style="display:flex; justify-content:space-between;"><b>{data['name'] if unlocked else "???"}</b><span>x{count}</span></div>
                 <div style="font-size:18px; font-weight:bold;">${cost:,}</div>
                 <div style="font-size:11px; color:{accent};">+{data['pwr']} MPS Base</div>
             </div>""", unsafe_allow_html=True)
