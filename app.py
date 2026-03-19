@@ -1,7 +1,11 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import json
+import time
+import math
+import os
 
-# 1. This "injects" the code Google wants into the <head> of your game
+# --- 1. ADSENSE INJECTION ---
 components.html(
     """
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" 
@@ -11,15 +15,7 @@ components.html(
     height=0,
 )
 
-# 2. Your Game Title and Layout
-st.set_page_config(page_title="DIAMOND EMPIRE", layout="wide")
-import streamlit as st
-import json
-import time
-import math
-import os
-
-# --- CONFIG ---
+# --- 2. CONFIG (ONLY ONE ALLOWED) ---
 st.set_page_config(page_title="DIAMOND EMPIRE: OVERDRIVE", layout="wide", initial_sidebar_state="collapsed")
 
 # --- SAVING/LOADING ---
@@ -76,14 +72,27 @@ BUILDINGS = {
     "11": {"name": "Universal Reset Core", "cost": 60e12, "pwr": 150e6, "icon": "💎", "anim": "pulse 0.2s infinite"},
 }
 
+# --- HACKER MODE (SECRET SIDEBAR) ---
+with st.sidebar:
+    st.header("🛠️ DEV TOOLS")
+    if st.button("🚀 ADD $1 TRILLION"):
+        st.session_state.money += 1000000000000
+        st.session_state.total_earned += 1000000000000
+        st.rerun()
+    if st.button("🔥 MAX ALL UPGRADES"):
+        for k in st.session_state.upgrades:
+            st.session_state.upgrades[k] += 50
+        st.rerun()
+    if st.button("🧹 RESET SAVE"):
+        if os.path.exists(DB_FILE): os.remove(DB_FILE)
+        st.session_state.clear()
+        st.rerun()
+
 def get_current_mps():
     return sum(int(st.session_state.upgrades[t]) * b['pwr'] for t, b in BUILDINGS.items())
 
 # --- THE GRIND LOGIC ---
-# Every level increases the Surge requirement by a power of 1.8 (Harder Grind)
 SURGE_GOAL = 150 * (st.session_state.level ** 1.8) 
-
-# Progression for Leveling Up
 next_level_cost = 5000 * (st.session_state.level ** 2.2)
 if st.session_state.total_earned >= next_level_cost:
     st.session_state.level += 1
@@ -124,19 +133,17 @@ with l:
     st.markdown(f"<h1>${st.session_state.money:,.0f}</h1>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{accent}; font-weight:bold;'>MPS: ${round(get_current_mps() * multiplier, 1)}</p>", unsafe_allow_html=True)
     
-    # SWARMING EFFECT
     siphons = int(st.session_state.upgrades["0"])
-    swarm_html = "".join([f'<div class="swarming-diamond" style="left:calc(50% + {150*math.cos(math.radians(i*(360/min(siphons,30))))}px - 12px); top:calc(50% + {150*math.sin(math.radians(i*(360/min(siphons,30))))}px - 12px); --rot:{i*(360/min(siphons,30))+45}deg; --tx:{-30*math.cos(math.radians(i*(360/min(siphons,30))))}px; --ty:{-30*math.sin(math.radians(i*(360/min(siphons,30))))}px; animation: stab 1s infinite {i*0.03}s;">💠</div>' for i in range(min(siphons, 30))])
+    swarm_html = "".join([f'<div class="swarming-diamond" style="left:calc(50% + {150*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); top:calc(50% + {150*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px - 12px); --rot:{i*(360/min(max(siphons,1),30))+45}deg; --tx:{-30*math.cos(math.radians(i*(360/min(max(siphons,1),30))))}px; --ty:{-30*math.sin(math.radians(i*(360/min(max(siphons,1),30))))}px; animation: stab 1s infinite {i*0.03}s;">💠</div>' for i in range(min(siphons, 30))])
     st.markdown(f'<div class="clicker-container">{swarm_html}<div class="main-clicker">💎</div></div>', unsafe_allow_html=True)
 
-    # SURGE BOOST BAR (GETS HARDER PER LEVEL)
     st.markdown(f"<small>5X SURGE PROGRESS (LV.{st.session_state.level})</small>", unsafe_allow_html=True)
     st.markdown(f'<div class="boost-container"><div class="boost-fill"></div></div>', unsafe_allow_html=True)
 
     if st.button("MANUAL EXTRACT", use_container_width=True):
         st.session_state.money += (1 + (get_current_mps() * 0.1)) * multiplier
         st.session_state.total_earned += (1 + (get_current_mps() * 0.1)) * multiplier
-        st.session_state.surge_count += 2.5 # Manual clicks charge the 5x boost
+        st.session_state.surge_count += 2.5 
         st.rerun()
 
 with m:
@@ -179,7 +186,6 @@ if elapsed >= 1.0:
     st.session_state.total_earned += (get_current_mps() * multiplier * elapsed)
     
     if not is_surging:
-        # Siphons charge the boost bar automatically
         st.session_state.surge_count += (siphons * 0.5 * elapsed)
         if st.session_state.surge_count >= SURGE_GOAL:
             st.session_state.surge_active, st.session_state.surge_end, st.session_state.surge_count = True, now + 15, 0
