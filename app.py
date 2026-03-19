@@ -1,14 +1,18 @@
 import streamlit as st
+import streamlit.components.v1 as components
 
-# THIS IS WHAT GOOGLE ACTUALLY SEES
-st.components.v1.html(
+# 1. This "injects" the code Google wants into the <head> of your game
+components.html(
     """
-    <head>
-        <meta name="google-adsense-account" content="ca-pub-8679117636092243">
-    </head>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8679117636092243" 
+    crossorigin="anonymous"></script>
+    <meta name="google-adsense-account" content="ca-pub-8679117636092243">
     """,
     height=0,
 )
+
+# 2. Your Game Title and Layout
+st.set_page_config(page_title="DIAMOND EMPIRE", layout="wide")
 import streamlit as st
 import json
 import time
